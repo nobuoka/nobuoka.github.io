@@ -1,0 +1,604 @@
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>IIJmio Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<link rel="shortcut icon" href="https://api.iijmio.jp/static/favicon.ico" />
+<link rel="stylesheet" href="https://api.iijmio.jp/static/jquery.mobile.structure-1.3.2.css" />
+<link rel="stylesheet" href="https://api.iijmio.jp/static/mio.css" />
+<script src="https://api.iijmio.jp/static/jquery-1.9.1.min.js"></script>
+<script src="https://api.iijmio.jp/static/jquery.mobile-1.3.2.min.js"></script>
+<script src="https://api.iijmio.jp/static/auth.js"></script>
+<script src="https://api.iijmio.jp/static/md5.js"></script>
+
+<style>
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.ui-header .ui-title {
+  overflow: visible;
+  white-space: normal;
+  margin-top: 8px;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 8px;
+  font-size: large;
+}
+
+.ui-header.ui-bar-a {
+  border: 1px solid #5f67ae;
+}
+
+.ui-header-fixed {
+  top: 0px !important;
+}
+
+.ui-page {
+  background: #efeff4;
+}
+
+.wordbreak {
+  overflow: visible;
+  white-space: normal;
+}
+
+.hide-control {
+  display: none;
+}
+
+.ui-field-contain:first-child {
+  padding-top: 0;
+  padding-bottom: 0;
+  white-space: nowrap;
+}
+
+.ui-dialog-background {
+  opacity: 0.4;
+  display: block !important;
+  /* -webkit-transition: opacity 0.5s ease-in; */
+}
+
+.ui-dialog-background.pop.in {
+  opacity: 1;
+  /* -webkit-transition: opacity 0.5s ease-in; */
+}
+
+.ui-dialog {
+  min-height: 100% !important;
+  background: transparent !important;
+}
+
+div#errorMessage {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+
+#confirm.ui-btn-up-a {
+  background: #ffdddd !important;
+}
+
+div.ui-loader.ui-body-a {
+  border: 2px solid #2A2A2A /*{a-body-border}*/; /* ajax-loader border */
+}
+
+div.ui-content {
+  background: #efeff4; /* content background color */
+}
+
+div#inner-content {
+  margin-top: .6em;
+  margin-bottom: .6em;
+}
+
+.ui-navbar .ui-btn-up-a {
+  /* background: #29abe2; */
+  background: #f6f6f7; /* mio color */
+}
+
+.ui-navbar .ui-btn-hover-a {
+  /* background: #3aeaFF; */
+  background: #dbdbda; /* mio color */
+}
+
+.ui-navbar .ui-btn-hover-b {
+  /* background: #3aeaFF; */
+  background: #6774ba; /* mio color */
+}
+
+.ui-navbar .ui-btn-down-a {
+  /* background: #177da8; */
+  background: #dbdbda; /* mio color */
+}
+
+.ui-navbar .ui-btn-text {
+  color: #007aff;
+}
+.ui-navbar .ui-btn-down-a .ui-btn-text {
+  color: #80b7ff;
+}
+
+.ui-navbar .ui-btn {
+  border: 0px;
+}
+
+.nav-custom .ui-btn .ui-btn-inner {
+  font-size: small;
+  padding-top: 40px !important;
+}
+
+.nav-custom .ui-btn .ui-icon {
+  width: 36px !important;
+  height: 36px !important;
+  margin-left: -18px !important;
+  box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -webkit-border-radius: none !important;
+  border-radius: none !important;
+}
+
+/* Notification Icons .ui-li-count */
+.nav-custom li a .ui-li-count{
+  color: #ffffff;
+  top: 45%;
+  left: 60%;
+  /* font-size: 90%; */
+  text-shadow: none;
+  font-weight: normal;
+  /* box-shadow: 1px 1px 1px #999; */
+  padding-bottom: 1px;
+  /* border: 0.15em solid #ffffff; */
+  border-radius: 14px;
+  -moz-border-radius: 14px;
+  -webkit-border-radius: 14px;
+  background-color: #f00;
+  line-height: 14px;
+  display: inline-block;
+  background-position: 0 0 !important;
+  margin-top: -24px;
+  position: absolute;
+  padding: .2em .4em;
+}
+
+.label-block {
+  margin: 0 !important;
+}
+
+.coupon-switch-block {
+  width: 100% !important;
+}
+
+h3.ui-collapsible-heading .ui-btn {
+  border: 0;
+  background: transparent;
+}
+
+div.ui-collapsible-content {
+  margin-right: -.2em;
+  padding-right: 0;
+  margin-bottom: -.6em;
+  padding-bottom: 0;
+}
+
+.ui-li {
+  border-top: 1px solid #a7a7aa; /* liのborderの色 */
+  border-bottom: 0; /* liのborderの色 */
+  color: #000000;
+}
+
+.ui-last-child {
+  border-bottom: 1px solid #a7a7aa !important; /* liのborderの色 */
+}
+
+.ui-li-divider {
+  border: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 2px;
+  padding-right: 0;
+  background: #5f67ae; /* dividerの色 */
+}
+
+h3.ui-li-heading {
+  margin: 0;
+}
+
+.ui-loader h1 {
+  font-weight: normal;
+}
+
+p.ui-li-desc {
+  padding-left: 13px;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+.li-lineinfo {
+  margin-right: -2px !important;
+  padding-right: 0 !important; /* 元は15px */
+  padding-left: 15px !important;
+}
+
+.li-lineinfo-first-child {
+  border-top: 0;
+}
+
+.li-lineinfo-grid {
+  margin-right: 15px;
+}
+
+input.label {
+  font-size: large;
+}
+
+span.labelCaption {
+  font-size: large;
+  font-weight:normal;
+  display:block;
+}
+
+span.labelTelno {
+  font-size: large;
+  font-weight:normal;
+  display:block;
+}
+
+span.labelSms {
+  margin-left: 4px;
+}
+
+span.labelIccid {
+  font-size: small;
+  font-weight:normal;
+  display:block;
+}
+
+p.divider-detail {
+  font-size: small;
+  padding-bottom: .6em;
+}
+
+.divider-caption {
+  font-size: medium;
+  font-weight: normal;
+  margin: .3em 0;
+  color: #ffffff /*{a-bar-color}*/;
+  /* text-shadow: 0 /*{a-bar-shadow-x}*/ 1px /*{a-bar-shadow-y}*/ 0 /*{a-bar-shadow-radius}*/ #444444 /*{a-bar-shadow-color}*/; */
+}
+
+.divider-couponsum {
+  font-size: medium;
+  font-weight: normal;
+  margin: .3em 0;
+  text-align: right;
+  color: #ffffff /*{a-bar-color}*/;
+  /* text-shadow: 0 /*{a-bar-shadow-x}*/ 1px /*{a-bar-shadow-y}*/ 0 /*{a-bar-shadow-radius}*/ #444444 /*{a-bar-shadow-color}*/; */
+}
+
+.divider-detailcaption {
+  border-top: 1px solid #ffffff;
+  font-weight: normal;
+  margin: 0 0 0 0;
+  padding-top: .3em;
+  padding-bottom: .3em;
+  padding-left: .3em;
+  padding-right: 0;
+  color: #ffffff /*{a-bar-color}*/;
+  /* text-shadow: 0 /*{a-bar-shadow-x}*/ 1px /*{a-bar-shadow-y}*/ 0 /*{a-bar-shadow-radius}*/ #444444 /*{a-bar-shadow-color}*/; */
+}
+
+.divider-detailvalue {
+  border-top: 1px solid #ffffff;
+  font-weight: normal;
+  margin: 0 0 0 0;
+  padding-top: .3em;
+  padding-bottom: .3em;
+  padding-left: .3em;
+  padding-right: 15px;
+  text-align: right;
+  color: #ffffff /*{a-bar-color}*/;
+  /* text-shadow: 0 /*{a-bar-shadow-x}*/ 1px /*{a-bar-shadow-y}*/ 0 /*{a-bar-shadow-radius}*/ #444444 /*{a-bar-shadow-color}*/; */
+}
+
+.usage {
+  font-size: small;
+  margin-top: .7em;
+  border-spacing:0;
+  border-collapse: collapse;
+  empty-cells:show;
+}
+
+.fontsize-medium {
+  font-size: medium !important;
+}
+
+p.usage-detail {
+  padding-left: 10px;
+}
+
+th {
+  border: 1px solid #a7a7aa;
+  background: #e0e0e0;
+}
+td {
+  border: 1px solid #a7a7aa;
+}
+
+.usage-detailcaption {
+  border-top: 1px solid #a7a7aa;
+  font-weight: normal;
+  padding-top: .3em;
+  padding-bottom: .3em;
+  padding-left: .3em;
+  padding-right: 0;
+  text-align: left;
+}
+
+.usage-detailvalue {
+  border-top: 1px solid #a7a7aa;
+  font-weight: normal;
+  padding-top: .3em;
+  padding-bottom: .3em;
+  padding-left: 0;
+  padding-right: 15px;
+  text-align: right;
+}
+
+.usage-detailtotalvalue {
+  font-weight: normal;
+  text-align: right;
+}
+
+.usage-memo {
+  text-align: right;
+  border: 0;
+  padding-top: .3em;
+  padding-bottom: .3em;
+  padding-right: 0;
+}
+
+.usage-regulation-text {
+  text-align: right;
+  border: 1px solid #f00;
+  background: #ff0000;
+  color: #ffffff;
+  margin-left: .3em;
+  margin-right: 0;
+}
+
+.usage-sms-text {
+  border: 1px solid #4cd864;
+  color: #4cd864;
+  margin-left: .3em;
+  margin-right: 0;
+}
+
+.regulation-block-a {
+  width: 10% !important;
+}
+.regulation-block-b {
+  width: 10% !important;
+}
+.regulation-block-c {
+  width: 80% !important;
+}
+
+.ui-slider-label-a {
+  color: #ffffff;
+  background: #5f67ae;
+  /* background: #4cd864; */
+}
+.ui-slider-label-a:visited,
+.ui-slider-label-a:hover {
+  color: #ffffff;
+}
+.ui-slider-label-b {
+  color: #000000;
+  background: #f6f6f7;
+}
+.ui-slider-label-b:visited,
+.ui-slider-label-b:hover {
+  color: #000000;
+}
+.ui-slider {
+  -webkit-border-radius: 1.2em /*{global-radii-buttons}*/;
+  border-radius: 1.2em /*{global-radii-buttons}*/;
+  border: 2px solid #c7c7cc;
+}
+.ui-slider-label {
+  -webkit-border-radius: 1em /*{global-radii-buttons}*/;
+  border-radius: 1em /*{global-radii-buttons}*/;
+}
+.ui-slider-handle {
+  -webkit-border-radius: 1em /*{global-radii-buttons}*/;
+  border-radius: 1em /*{global-radii-buttons}*/;
+  border: 1px solid #c7c7cc;
+}
+.ui-slider-handle .ui-btn-inner:visited,
+.ui-slider-handle .ui-btn-inner:active,
+.ui-slider-handle .ui-btn-inner:hover {
+  background: #fff;
+}
+
+.ui-focus,
+.ui-btn:focus {
+  box-shadow: none !important;
+}
+
+.ui-field-contain {
+  border-bottom-width: 0;
+}
+
+.ui-icon-shadow {
+  box-shadow: none !important;
+}
+
+.ui-checkbox .ui-btn {
+  border: 0;
+  background: #efeff4;
+}
+
+h2.ui-title {
+  font-size: normal !important;
+  font-weight: normal;
+}
+
+span#appName {
+  font-weight: bold;
+}
+
+</style>
+</head>
+<body>
+
+  <div data-role="page" id="loginDialog" data-theme="a" data-close-btn="none">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1>IIJmio ログイン</h1>
+    </div>
+    <div data-role="content">
+        <div data-role="fieldcontain">
+          <label for="username">mioID</label>
+          <input type="text" name="username" id="username" />
+        </div>
+        <div data-role="fieldcontain">
+          <label for="password">mioパスワード</label>
+          <input type="password" name="password" id="password" />
+          <label for="showPassword">パスワードを表示する</label>
+          <input type="checkbox" name="showPassword" id="showPassword" class="checkbox-showpassword" />
+          <a href="#" data-role="button" id="submit">ログイン</a>
+        </div>
+
+        <div data-role="fieldcontain">
+          <a href="#" data-role="button" id="settingsFromLogin">ヘルプ</a>
+        </div>
+    </div>
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+      <h2>&copy 2014-2015 Internet Initiative Japan Inc.</h2>
+    </div>
+  </div>
+
+  <div data-role="page" id="confirmDialog" data-theme="a" data-close-btn="none">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1>IIJmio ログイン</h1>
+    </div>
+    <div data-role="content">
+
+        <div data-role="fieldcontain">
+
+          <div id="confirmApp" class="wordbreak">
+            <span id="appName"></span>が以下の機能の許可を求めています。
+            連携を許可する場合は「許可する」ボタンを押してください。
+            <ul>
+            <li>クーポン残量の取得</li>
+            <li>クーポンのON/OFF状態の取得</li>
+            <li>クーポンのON/OFFの切り替え</li>
+            <li>データ利用量の取得</li>
+            </ul>
+            許可すると、連携許可が<span id="appCallback"></span>に通知されます。
+          </div>
+          <div id="confirmDevcon" class="wordbreak">
+            デベロッパコンソールが以下の機能の許可を求めています。
+            連携を許可する場合は「許可する」ボタンを押してください。
+            <ul>
+            <li>デベロッパIDの取得</li>
+            <li>デベロッパIDの変更</li>
+            <li>リダイレクトURIの取得</li>
+            <li>リダイレクトURIの変更</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <fieldset class="ui-grid-a">
+        <div class="ui-block-a">
+          <a href="#" data-role="button" data-rel="back" id="cancel">拒否する</a>
+        </div>
+        <div class="ui-block-b">
+          <a href="#" data-role="button" id="confirm">許可する</a>
+        </div>
+        </fieldset>
+    </div>
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+      <h2>&copy 2014-2015 Internet Initiative Japan Inc.</h2>
+    </div>
+  </div>
+
+  <div data-role="page" id="resultDialog" data-theme="a" data-close-btn="none">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1>IIJmio ログイン</h1>
+    </div>
+    <div data-role="content">
+      連携機能を許可しました。
+    </div>
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+      <h2>&copy 2014-2015 Internet Initiative Japan Inc.</h2>
+    </div>
+  </div>
+
+  <div data-role="page" id="settings" data-theme="a">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1>ヘルプ</h1>
+    </div>
+
+    <div data-role="content">
+
+        <div data-role="fieldcontain">
+
+          <div class="wordbreak">
+          <a href="#" data-role="button" id="clear">保存情報のクリア</a>
+          端末に保存されているmioIDを削除します。
+          </div>
+
+          <div class="wordbreak" id="iijmioButton">
+          <a href="https://www.iijmio.jp/m/" data-role="button" id="iijmio"><img src="https://api.iijmio.jp/static/miologo.png" border="0" /></a>
+          IIJmioモバイル用ホームページを開きます。
+          </div>
+
+          <div class="wordbreak">
+          <a href="#" data-role="button" data-rel="back" id="backFromSettings">戻る</a>
+          ログイン画面に戻ります。
+          </div>
+
+        </div>
+
+    </div>
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+      <h2>&copy 2014-2015 Internet Initiative Japan Inc.</h2>
+    </div>
+  </div>
+
+  <div data-role="page" id="errorDialog" data-theme="a" data-close-btn="none">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1 id="errorTitle"></h1>
+    </div>
+
+    <div data-role="content">
+      <div id="errorMessage" class="wordbreak"></div>
+      <a href="#" data-role="button" data-rel="back" id="backFromErrorDialog">OK</a>
+    </div>
+  </div>
+
+  <div data-role="page" id="paramErrorDialog" data-theme="a" data-close-btn="none">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1 id="paramErrorTitle"></h1>
+    </div>
+
+    <div data-role="content">
+      <div id="paramErrorMessage" class="wordbreak"></div>
+    </div>
+
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+      <h2>&copy 2014-2015 Internet Initiative Japan Inc.</h2>
+    </div>
+
+  </div>
+
+  <script>
+    fastButtons.replace();
+  </script>
+
+</body>
+</html>

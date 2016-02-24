@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ja">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>ComponentsRecyclerAdapter を用いて複数の view type や複雑なデータ構造を扱う — 関西モバイルアプリ研究会 #11 (2016 年 2 月 24 日)</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+        </style>
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1 style="margin-bottom: 0.4em"><code>Components&shy;Recycler&shy;Adapter</code></h1>
+					<h3 style="font-size: 1em;"><code>RecyclerView</code> で複数の view type や複雑なデータ構造を扱う</h3>
+					<p style="margin-top: 2em;">
+						<div style="margin-bottom: 0.4em;"><a href="http://vividcode.hatenablog.com/">id:nobuoka</a> / <a href="http://twitter.com/nobuoka">@nobuoka</a></div>
+						<div><small><time datetime="2016-02-24">2016 年 2 月 24 日</time>
+                          — <a href="http://kanmoba.connpass.com/event/26645/">関西モバイルアプリ研究会 #11</a></small></div>
+					</p>
+				</section>
+
+				<section>
+					<h2>こんにちは！</h2>
+					<ul>
+                        <li>はてな id:nobuoka</li>
+						<li>ソフトウェア開発者
+                            <ul>
+                                <li>モバイルアプリ開発 (<em>Android</em>、UWP)</li>
+                                <li>Web 開発 (Scala、Java、TypeScript、Perl)</li>
+                            </ul>
+                        </li>
+                        <li>仕事は Android アプリ 「はてなブックマーク」 開発</li>
+                        <li>今日は <code>RecyclerView</code> を使う際に便利な自作のライブラリを紹介</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2><code>RecyclerView</code> 使ってますよね？</h2>
+                    <ul>
+                        <li><a href="http://developer.android.com/tools/support-library/features.html#v7-recyclerview">v7 recyclerview library</a></li>
+                        <li><q>A flexible view for providing a limited window into a large data set. </q>
+                          <small>(<a href="http://developer.android.com/reference/android/support/v7/widget/RecyclerView.html"
+                          ><cite><code>RecyclerView</code> のドキュメントより</cite></a>)</small>
+                        </li>
+                        <li>なんらかの<em>データセットを表示</em>するための機能</li>
+                        <li>縦方向のリスト形式の表示も、グリッド表示も
+                            <ul>
+                                <li>独自のレイアウトの記述も可能</li>
+                            </ul>
+                        </li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>Adapter がデータセットと View をつなぐ</h2>
+                    <ul>
+                        <li><code>RecyclerView.Adapter</code> のサブクラス</li>
+                        <li><q>Adapters provide a binding from an app-specific data set to views that are displayed within a <code>RecyclerView</code>.</q>
+                          <small>(<a href="http://developer.android.com/reference/android/support/v7/widget/RecyclerView.Adapter.html"
+                          ><code>RecyclerView.Adapter</code> のドキュメントより</a>)</small>
+                        </li>
+                        <img src="https://docs.google.com/drawings/d/1iaaCcqpqLr5zQPdARvJnAVrsj2nOdIkR5fAybN11KxM/pub?w=751&amp;h=122">    
+                    </ul>
+				</section>
+
+				<section>
+					<h2>Adapter の役割</h2>
+                    <ul>
+                        <li>データセット内の指定の位置の <em>view の種類 (view type)</em> を返す
+                          <small>(<a href="http://developer.android.com/intl/ja/reference/android/support/v7/widget/RecyclerView.Adapter.html#getItemViewType%28int%29"
+                          ><code>getItemViewType(int)</code></a>)</small></li>
+                        <li>View の種類に応じた <code>ViewHolder</code> を生成
+                          <small>(<a href="http://developer.android.com/intl/ja/reference/android/support/v7/widget/RecyclerView.Adapter.html#onCreateViewHolder%28android.view.ViewGroup,%20int%29"
+                          ><code>onCreateViewHolder(ViewGroup, int)</code></a>)</small></li>
+                        <li>データセット内の指定の位置の項目の内容を View に反映
+                          <small>(<a href="http://developer.android.com/intl/ja/reference/android/support/v7/widget/RecyclerView.Adapter.html#onBindViewHolder%28VH,%20int,%20java.util.List%3Cjava.lang.Object%3E%29"
+                          ><code>onBindViewHolder(VH, int, List&lt;Object>)</code></a>)</small></li>
+                    </ul>
+				</section>
+
+				<section>
+					<p><em>単純なデータセット</em>を <em>1 個や 2 個程度の view type</em> で扱う分には普通に
+                        <code>RecyclerView.Adapter</code> のサブクラスを定義してやればよい。 (困ることはない。)</p>
+					<p class="fragment"><em>だがしかし……！！</em></p>
+				</section>
+
+				<section>
+					<h2>問題 1 : 複数の view type を扱うのは面倒</h2>
+                    <ul>
+                        <li>項目、view type、<code>ViewHolder</code>、binding 間の関係の記述が散らばる<ul>
+                            <li><code>getItemViewType</code> メソッド</li>
+                            <li><code>onCreateViewHolder</code> メソッド</li>
+                            <li><code>onBindViewHolder</code> メソッド</li>
+                        </ul></li>
+                        <li>単一データセットでもそうだし、複数データセットの複雑な構造ではさらに</li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>問題 2 : 表示用のデータ構造が複雑になるとメンテナンスが難しい</h2>
+                    <ul>
+                        <li>複数のデータセットの内容を続けて画面上に表示<ul>
+                            <li>「人気」 の項目と 「おすすめ」 の項目をセクション分けして表示、とか</li>
+                        </ul></li>
+                        <li>ドメインの関心事以外の項目<ul>
+                            <li>広告を途中に挿入</li>
+                            <li>セクションヘッダとか 「もっと読む」 ボタンとか</li>
+                        </ul></li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>これらの問題を解決する <code>ComponentsRecyclerAdapter</code></h2>
+                    <ul>
+                        <li>「はてなブックマーク」 Android アプリのために開発</li>
+                        <li><em>各データセットを扱う部分をコンポーネント化</em></li>
+                        <li>類似のライブラリと比較して<em>プレゼンテーションのためのデータ構造</em>が記述しやすい (と思ってる)<ul>
+                            <li>コンポーネント同士の組み合わせで構造を記述</li>
+                        </ul></li>
+                    </ul>
+				</section>
+
+				<section>
+					<img src="https://docs.google.com/drawings/d/1onIbQuvIjOlsK5EBBIR3Wckn66v1-JKmmj1qT0Hwupw/pub?w=912&amp;h=321">
+                    <ul>
+                        <li>View type と <code>ViewHolder</code> 生成処理の関係は <code>ViewHolderFactoryRegistry</code> に宣言的に記述</li>
+                        <li>表示用のデータ構造を <code>Component</code> で記述<ul>
+                            <li>各項目の item view と binding 方法の指定は <code>Component</code> の役割</li>
+                        </ul></li>
+				</section>
+
+				<section>
+					<h2>使い方</h2>
+				</section>
+
+				<section>
+					<h2><code>build.gradle</code> に依存記述</h2>
+					<pre><code class="hlgroovy" data-trim contenteditable
+>repositories {
+  jcenter()
+}
+
+dependencies {
+  compile 'info.vividcode.android:components-recycler-adapter:0.1.0'
+  compile 'com.android.support:recyclerview-v7:23.1.1'
+}</code></pre>
+				</section>
+
+				<section>
+					<h2><code>ViewHolder</code> (+ Factory) 定義</h2>
+                    <p>レイアウトファイルと <code>ViewHolder</code> のクラスを一対一で対応させるのがおすすめ</p>
+					<pre><code class="hljava" data-trim contenteditable
+>public class ContentViewHolder extends RecyclerView.ViewHolder {
+  // こういう Factory も必要。 (この例では lambda 式を使用。)
+  public static final ViewHolderFactory&lt;ContentViewHolder> FACTORY =
+      (parent) -> {
+        TextView v = (TextView) LayoutInflater.from(parent.getContext())
+            .inflate(R.layout.item_content, parent, false);
+        return new ContentViewHolder(v);
+      };
+
+  public final TextView textView;
+
+  public ContentViewHolder(TextView itemView) {
+    super(itemView);
+    textView = itemView;
+  }
+}</code></pre>
+				</section>
+
+				<section>
+					<h2><code>Binder</code> 定義</h2>
+                    <p>特定の <code>ViewHolder</code> と特定の型の項目の binding 処理。</p>
+					<pre><code class="hljava" data-trim contenteditable
+>public class StringContentBinder
+    implements Binder&lt;ContentViewHolder, String> {
+  // インスタンスを static フィールドで保持しておく必要はない。
+  // (後で使うのでここでは定義してある。)
+  public static final StringContentBinder INSTANCE =
+      new StringContentBinder();
+
+  @Override
+  public void bindViewHolder(
+      ContentViewHolder h, Component&lt;String> c, int posInComponent) {
+    h.textView.setText(c.getItem(posInComponent);
+  }
+}</code></pre>
+				</section>
+
+				<section>
+					<section>
+                        <h2>Adapter 定義</h2>
+                        <p>Adapter は <code>ComponentsRecyclerAdapter</code> を継承して、以下の内容を実装する。</p>
+                        <pre><code class="hljava" data-trim contenteditable
+>public class MyAdapter extends ComponentsRecyclerAdapter {
+
+  // View type と ViewHolderFactory の関連付け
+  // (ViewHolderFactoryRegistry)
+
+  // コンポーネントの定義
+
+  // コンストラクタで ViewHolderFactoryRegistry とコンポーネントを登録
+
+}</code></pre>
+					</section>
+					<section>
+                        <h2>View type と <code>ViewHolderFactory</code> の関連付け</h2>
+                        <pre><code class="hljava" data-trim contenteditable
+>public class MyAdapter extends ComponentsRecyclerAdapter {
+
+  public static final ViewTypes VIEW_TYPES = new ViewTypes();
+  public static class ViewTypes extends ViewHolderFactoryRegistry {
+    // ContentViewHolder を生成する Factory を登録し、
+    // その view type をフィールド変数に保持
+    public final ViewType&lt;ContentViewHolder> content =
+        register(ContentViewHolder.FACTORY);
+    // ...
+    // (同じようにして複数の Factory を登録して view type を変数に保持する)
+  }</code></pre>
+                        <p>宣言的に結び付きを記述。</p>
+					</section>
+					<section>
+                        <h2>コンポーネントの定義</h2>
+                        <pre><code class="hljava" data-trim
+>public class MyAdapter extends ComponentsRecyclerAdapter {
+  // ...
+
+  // 文字列のリストを参照するコンポーネント。
+  private final ListReferenceComponent&lt;String> mStringListComponent =
+      ListReferenceComponent.create(
+        // データセット内の各項目の view type と binder を指定。
+        // (ここでは、全ての項目について view type を `content` に、
+        // binder を `StringContentBinder` にしている。)
+        new FixedViewTypeBinderPairProvider&lt;>(
+            VIEW_TYPES.content,
+            StringContentBinder.INSTANCE)
+      );
+  // ...
+  // (表示用に複雑なデータ構造が必要な場合は、同様にして
+  // コンポーネントを定義していく。)</code></pre>
+                        <p>各項目の view type と binder の指定はここで。</p>
+					</section>
+					<section>
+                        <h2>コンストラクタ</h2>
+                        <pre><code class="hljava" data-trim
+>public class MyAdapter extends ComponentsRecyclerAdapter {
+  // ...
+
+  public MyAdapter(List&lt;String> list) {
+    // スーパークラスのコンストラクタに ViewHolderFactoryRegistry を渡す。
+    super(VIEW_TYPES);
+
+    // コンポーネントにリストをセット。
+    mStringListComponent.setList(list);
+    // ルートコンポーネントとして文字列のリストを参照する
+    // コンポーネントをセット。
+    setComponent(mStringListComponent);
+    // ...
+    // (複雑なデータ構造が必要ならここで作る。)
+  }</code></pre>
+					</section>
+				</section>
+
+				<section>
+					<h2>ぜひご利用ください</h2>
+                    <img src="github-screenshot.png" style="width: 760px;">
+                    <p><a href="https://github.com/nobuoka/ComponentsRecyclerAdapter"
+                      >https://github.com/nobuoka/ComponentsRecyclerAdapter</a></p>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

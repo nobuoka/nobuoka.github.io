@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Kotlin と Java EE — 4/2 (土) Kotlin 1.0 リリース記念勉強会 in 京都 (2016 年 4 月 2 日)</title>
+
+		<meta name="description" content="Java EE アプリケーションの中で Kotlin を使ってみます。">
+		<meta name="author" content="Nobuoka Yu">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="0224-kansai-mobile/css/reveal.css">
+		<link rel="stylesheet" href="0224-kansai-mobile/css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="0224-kansai-mobile/lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? '0224-kansai-mobile/css/print/pdf.css' : '0224-kansai-mobile/css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="0224-kansai-mobile/lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+        </style>
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1 style="margin-bottom: 0.4em">Kotlin と Java EE</h1>
+					<!--<h3 style="font-size: 1em;"></h3>-->
+					<p style="margin-top: 2em;">
+						<div style="margin-bottom: 0.4em;"><a href="http://vividcode.hatenablog.com/">id:nobuoka</a> / <a href="http://twitter.com/nobuoka">@nobuoka</a></div>
+						<div><small><time datetime="2016-04-02">2016 年 4 月 2 日</time>
+                          — <a href="http://kanjava.connpass.com/event/27758/">4/2 (土) Kotlin 1.0 リリース記念勉強会 in 京都 </a></small></div>
+					</p>
+				</section>
+
+				<section>
+					<h2>こんにちは！</h2>
+					<ul>
+                        <li>はてな id:nobuoka</li>
+						<li>ソフトウェア開発者
+                            <ul>
+                                <li>モバイルアプリ開発 (<em>Android</em>、UWP)</li>
+                                <li>Web 開発 (Scala、<em>Java</em>、TypeScript、Perl)</li>
+                            </ul>
+                        </li>
+                        <li>仕事は Android アプリ 「はてなブックマーク」 開発</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>祝！ Kotlin 1.0 リリース！</h2>
+                    <ul>
+                        <li>Android は takuji さんに任せてサーバーサイドで使ってみる</li>
+                        <li>Kotlin と Java の<em>相互運用性</em>はどんなものか？</li>
+                        <li><em>Java EE で使ってみて</em>どうなるのか？</li>
+                        <li>→ Kotlin で Java EE アプリケーションを書いてみた</li>
+                    </ul>
+				</section>
+
+				<section>
+                    <img src="20160402-kotlin-java-ee/gh-ss.png">
+                    <div><small><a href="https://github.com/nobuoka/kotlin-java-ee-sample"
+                        >https://github.com/nobuoka/kotlin-java-ee-sample</a></small></div>
+				</section>
+
+				<section>
+					<h2>使用している Java EE の技術要素</h2>
+                    <ul>
+                        <li><a href="https://www.jcp.org/en/jsr/detail?id=365">CDI</a> : 依存注入</li>
+                        <li>JAX-RS と MVC 1.0 : HTTP 周り</li>
+                        <li>JPA : DB 周り</li>
+                    </ul>
+				</section>
+
+				<section>
+                    <section>
+                        <h2>Kotlin と CDI</h2>
+                        <pre><code 
+>@field:Inject
+private lateinit var mCommentApplication: CommentApplication
+
+@field:Inject
+private lateinit var models: Models</code></pre>
+                    </section>
+                    <section>
+                        <h2>アノテーションの付与先の指定</h2>
+                        <p>プロパティやプライマリコンストラクタのパラメータにアノテーション<br>→ <em>複数の Java 要素</em>がターゲットになりうる</p>
+                        <pre><code
+>class Example(@field:Ann val foo,  // annotate Java field
+              @get:Ann val bar,    // annotate Java getter
+              @param:Ann val quux) // annotate Java constructor parameter</code></pre>
+                        <div><small>(<a href="https://kotlinlang.org/docs/reference/annotations.html#annotation-use-site-targets"
+                            >Annotations - Kotlin Programming Language</a> より)</small></div>
+                    </section>
+                    <section>
+                        <h2>Late-Initialized Properties (<code>lateinit</code>)</h2>
+                        <ul>
+                            <li>non-null 型のプロパティは通常コンストラクタで初期化する必要</li>
+                            <li>CDI やユニットテストの setup メソッドでの初期化の場合には不便</li>
+                            <li>プロパティに <em><code>lateinit</code> 修飾子</em>を付ける！</li>
+                        </ul>
+                        <pre><code
+>@field:Inject
+private lateinit var models: Models</code></pre>
+                        <div><small>(<a href="https://kotlinlang.org/docs/reference/properties.html#late-initialized-properties"
+                            >Properties and Fields - Kotlin Programming Language</a> より)</small></div>
+                    </section>
+				</section>
+
+				<section>
+                    <section>
+                        <h2>Kotlin と JAX-RS / MVC</h2>
+                        <pre><code 
+>@Path("/comments")
+@RequestScoped
+open class CommentController {
+    @field:Inject
+    private lateinit var mCommentApplication: CommentApplication
+
+    @Controller
+    @GET
+    @Produces("text/html")
+    open fun getTest(): Response {
+        mModels.put("comments", mCommentApplication.readComments())
+        return Response.ok("comments.jsp").build()
+    }
+}
+</code></pre>
+                    </section>
+                    <section>
+                        <h2><code>open</code> アノテーション</h2>
+                        <ul>
+                            <li>デフォルトでクラスは <code>final</code></li>
+                            <li>メソッドも <code>final</code></li>
+                            <li><code>open</code> アノテーションで継承可能に</li>
+                            <li>CDI ビーンとして使用するには proxyable でなければならない (?) ので <code>open</code> を付ける</li>
+                        </ul>
+                    </section>
+				</section>
+
+				<section>
+                    <section>
+                        <h2>Kotlin と JPA</h2>
+                        <pre><code 
+>@Entity
+@Table(name = "comment")
+@NamedQuery(name = "Comment.findAll", query = "SELECT c FROM Comment c")
+class Comment(text: String) : Serializable {
+    companion object {
+        private const val serialVersionUID = 1L
+    }
+
+    @field:Column(name = "text")
+    var text: String = text
+}
+
+fun EntityManager.createNamedQueryCommentFindAll() =
+        this.createNamedQuery("Comment.findAll", Comment::class.java)</code></pre>
+                    </section>
+                    <section>
+                        <h2>Java の static フィールド</h2>
+                        <ul>
+                            <li>companion object のプロパティ → static backing field を持ちうる</li>
+                            <li>通常 private だが、Java 側から見えるようにできる</li>
+                        </ul>
+                        <pre><code
+>class Key(val value: Int) {
+    companion object {
+        @JvmField
+        val COMPARATOR: Comparator&lt;Key> = compareBy&lt;Key> { it.value }
+    }
+}</code></pre>
+                        <div><small>(<a href="https://kotlinlang.org/docs/reference/java-to-kotlin-interop.html#static-fields"
+                            >Calling Kotlin from Java - Kotlin Programming Language</a> より)</small></div>
+                    </section>
+                    <section>
+                        <h2>Java のクラスリテラル相当</h2>
+                        <ul>
+                            <li>Kotlin では <code>KotlinClass::class</code> というリテラル<ul>
+                                <li><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.reflect/-k-class/index.html"
+                                    ><code>KClss</code> クラス</a>のオブジェクト</li>
+                            </ul></li>
+                            <li>Java の <code>Class</code> を得るには <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/java.html"
+                                ><code>#java</code> プロパティ</a></li>
+                        </ul>
+                        <pre><code
+>val c = MyClass::class.java</code></pre>
+                        <div><small>(<a href="https://kotlinlang.org/docs/reference/reflection.html#class-references"
+                            >Reflection - Kotlin Programming Language</a>)</small></div>
+                    </section>
+                    <section>
+                        <h2>拡張関数</h2>
+                        <ul>
+                            <li>Java のクラスにも拡張関数を定義できる！</li>
+                        </ul>
+                        <pre><code
+>fun EntityManager.createNamedQueryCommentFindAll() =
+        this.createNamedQuery("Comment.findAll", Comment::class.java)</code></pre>
+                        <div><small>(<a href="https://kotlinlang.org/docs/reference/extensions.html"
+                            >Extensions - Kotlin Programming Language</a>)</small></div>
+                    </section>
+				</section>
+
+				<section>
+					<h2>感想</h2>
+                    <ul>
+                        <li>Java と Kotlin を混ぜて使うのに困ることはほぼ無さそう</li>
+                        <li>どうするのがいいのかで悩む箇所は出てきそう</li>
+                        <li>Java で書かれたアプリケーションを少しずつ Kotlin で書いていくのも現実的ぽい</li>
+                        <li>ググって出てくる Kotlin 情報は古いことも多かった → 公式のドキュメントを見よう！</li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>参考ページ</h2>
+                    <h3>Kotlin + Java EE</h3>
+                    <ul>
+                        <li><a href="http://etc9.hatenablog.com/entry/2015/05/17/150230"
+                            >Kotlin で始める Java EE 7 〜 JPA + CDI + JSF 〜 - A Memorandum</a></li>
+                        <li><a href="http://yyyank.blogspot.jp/2015/04/kotlinkotlinjava-ee-8-mvc10ozark.html"
+                            >【Kotlin】 Kotlin でも Java EE 8 の MVC 1.0 (Ozark) は動くよ - Java プログラマーのはしくれダイアリー</a></li>
+                        <li><a href="http://arhipov.blogspot.jp/2014/12/java-ee-meets-kotlin.html"
+                            >Code Impossible: Java EE meets Kotlin</a></li>
+                    </ul>
+                    <h3>Kotlin 全般</h3>
+                    <ul>
+                        <li><a href="https://kotlinlang.org/docs/"
+                            >Documentation - Kotlin Programming Language</a></li>
+                        <li><a href="http://taro.hatenablog.jp/archive/category/Kotlin"
+                            >算譜王におれはなる!!!! (Kotlin カテゴリ)</a></li>
+                    </ul>
+				</section>
+			</div>
+
+		</div>
+
+		<script src="0224-kansai-mobile/lib/js/head.min.js"></script>
+		<script src="0224-kansai-mobile/js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: '0224-kansai-mobile/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: '0224-kansai-mobile/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '0224-kansai-mobile/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '0224-kansai-mobile/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: '0224-kansai-mobile/plugin/zoom-js/zoom.js', async: true },
+					{ src: '0224-kansai-mobile/plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ja">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>React Native の UWP サポート</title>
+
+		<meta name="description" content="React Native の UWP (Universal Windows Platform) サポートの雰囲気を紹介します。">
+		<meta name="author" content="Nobuoka Yu">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="0224-kansai-mobile/css/reveal.css">
+		<link rel="stylesheet" href="0224-kansai-mobile/css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="0224-kansai-mobile/lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? '0224-kansai-mobile/css/print/pdf.css' : '0224-kansai-mobile/css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="0224-kansai-mobile/lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+
+             iframe.twitter-tweet {
+                 margin: auto;
+             }
+        </style>
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>React Native の<br>UWP サポート</h1>
+					<small>(UWP = Universal Windows Platform)</small>
+					<p>
+						<div style="margin-bottom: 0.4em;"><a href="http://vividcode.hatenablog.com/">id:nobuoka</a> / <a href="http://twitter.com/nobuoka">@nobuoka</a></div>
+						<div><small><time datetime="2016-04-02">2016 年 5 月 25 日</time>
+                          — <a href="http://kanmoba.connpass.com/event/31750/">関西モバイルアプリ研究会 #14</a></small></div>
+					</p>
+				</section>
+
+				<section>
+					<h2>こんにちは！</h2>
+					<ul>
+                        <li>はてな id:nobuoka</li>
+						<li>ソフトウェア開発者
+                            <ul>
+                                <li>モバイルアプリ開発 (<em>Android</em>、UWP)</li>
+                                <li>Web 開発 (Scala、Java、TypeScript、Perl)</li>
+                            </ul>
+                        </li>
+                        <li>仕事は Android アプリ 「はてなブックマーク」 開発</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>前回 React Native の<br>UWP サポートの紹介 <small>(matuyuji さん)</small></h2>
+					<script async class="speakerdeck-embed"
+					     data-slide="6" data-id="af95a950eaef4d7599f256111433d0f7" data-ratio="1.33333333333333"
+						src="//speakerdeck.com/assets/embed.js"></script>
+				</section>
+				
+				<section>
+					<h2>仕組み</h2>
+					<ul>
+						<li>アプリ開発者 : JS + React で UI を定義</li>
+						<li>フレームワーク : React DOM を Native プラットフォームの View マネージャのメソッド呼び出しに変換 / ネイティブモジュールを JS に露出</li>
+						<li>UWP では view マネージャとネイティブモジュールは C#</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>現状</h2>
+                    <ul>
+						<li>開発中の状態<ul>
+							<li>React Native 本家には入っていない</li>
+						</ul></li>
+						<li>GitHub 上で公開されているので試せる<ul>
+							<li>リポジトリ : <a href="https://github.com/ReactWindows/react-native"
+							    >GitHub - ReactWindows/react-native</a></li>
+							<li>ドキュメント : <a href="https://github.com/ReactWindows/react-native/blob/ReactWindows/ReactWindows/Readme.md"
+							    >react-native/Readme.md at ReactWindows · ReactWindows/react-native · GitHub</a></li>
+						</ul></li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>UWP でのプロジェクト構成</h2>
+					<img src="https://docs.google.com/drawings/d/1kjVuHauMvjOx3jgeyPtV7glM7IE173mioEHtQUjH2-0/pub?w=815&h=343"
+						style="width: 820px;">
+					<!--
+                    <ul>
+						<li>フレームワーク側<ul>
+							<li>ReactNative プロジェクト (C#)</li>
+							<li>React Native によるライブラリ (JavaScript)</li>
+						</ul></li>
+						<li>アプリ側<ul>
+							<li>Playground プロジェクト (C#)</li>
+							<li>Examples/UIExplorer (JavaScript)</li>
+						</ul></li>
+                    </ul>
+					-->
+				</section>
+
+				<section>
+					<h2>Demo</h2>
+				</section>
+
+				<section>
+					<h2>C# と JS の橋渡し</h2>
+					<ul>
+						<li>JS 実行は JS エンジンの <em>Chakra</em><ul>
+							<li>Edge や HTML + JS の UWP アプリで使用される</li>
+							<li>JavaScript Runtime (JsRT) API</li>
+							<li>参考 : <a href="https://github.com/Microsoft/ChakraCore/wiki/JsRunScript"
+								>JavaScript Runtime (JsRT) API の JsRunScript</a></li>
+							<li>参考 : <a href="https://blogs.windows.com/msedgedev/2015/05/18/using-chakra-for-scripting-applications-across-windows-10/"
+						        >Using Chakra for Scripting Applications across Windows 10</a></li>
+						</ul></li>
+						<li>UWP に含まれるので<em>アプリにバイナリを含める必要がない</em></li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>実装を読んでみる</h2>
+					<ul>
+						<li><a href="https://github.com/ReactWindows/react-native/blob/ReactWindows/ReactWindows/ReactNative/ReactPage.cs"
+						    ><code>ReactNative.ReactPage</code></a> :
+							<a href="https://msdn.microsoft.com/ja-jp/library/windows/apps/windows.ui.xaml.controls.page"
+							    ><code>Page</code></a> のサブクラス。<ul>
+							<li>React Native のインスタンス管理</li>
+							<li>サブクラスを作って使用</li>
+						</ul></li>
+						<li><a href="https://github.com/ReactWindows/react-native/blob/ReactWindows/ReactWindows/ReactNative/ReactInstanceManager.cs"
+						    ><code>ReactNative.ReactInstanceManager</code></a> : 各種インスタンス管理など。 JS 側に露出させる View マネージャやネイティブモジュールの管理なども。</li>
+						<li><a href="https://github.com/ReactWindows/react-native/blob/ReactWindows/ReactWindows/ReactNative/Bridge/"
+						    ><code>ReactNative.Bridge</code></a> 名前空間 : 橋渡し<ul>
+							<li><a href="https://github.com/ReactWindows/react-native/blob/3d2230304a6e7306b3412123cdefbb44528408de/ReactWindows/ReactNative/Bridge/ReactBridge.cs#L97-L110"
+							    ><code>ReactBridge#RunScript(string script)</code></a></li>
+						</ul></li>
+						<li><a href="https://github.com/ReactWindows/react-native/blob/ReactWindows/ReactWindows/ReactNative/Chakra/"
+						    ><code>ReactNative.Chakra</code></a> 名前空間 : JS 実行の実装<ul>
+							<li><a href="https://github.com/ReactWindows/react-native/blob/3d2230304a6e7306b3412123cdefbb44528408de/ReactWindows/ReactNative/Chakra/Executor/ChakraJavaScriptExecutor.cs#L89-L109"
+							    ><code>ChakraJavaScriptExecutor#RunScript(string script)</code></a></li>
+						</ul></li>
+					</ul>
+				</section>
+
+				<section>
+                    <h2>感想</h2>
+                    <ul>
+                        <li>React Native の UWP サポートはめでたい</li>
+                        <li>既存の HTML + JS での UWP アプリ開発との差別化は？<ul>
+							<li>UI を web 系の技術で書くかネイティブコンポーネントを使うか</li>
+							<li>他プラットフォームも React Native で書くなら良さそう</li>
+							<li>そうでなければさほど大きなメリットはなさそう</li>
+						</ul></li>
+                        <li>Chakra が扱いやすくて良い (React Native 関係なく)</li>
+                    </ul>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="0224-kansai-mobile/lib/js/head.min.js"></script>
+		<script src="0224-kansai-mobile/js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: '0224-kansai-mobile/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: '0224-kansai-mobile/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '0224-kansai-mobile/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '0224-kansai-mobile/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: '0224-kansai-mobile/plugin/zoom-js/zoom.js', async: true },
+					{ src: '0224-kansai-mobile/plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

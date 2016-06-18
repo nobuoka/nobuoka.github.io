@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ja">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Jenkins Pipelines と Android アプリ開発
+            — 第 7 回 大阪 Jenkins 勉強会 (2016 年 6 月 18 日)</title>
+
+        <meta name="description" content="Android アプリのプロジェクトに対するジョブを Jenkins の Pipeline プラグイン (旧称 Workflow プラグイン) によって実行します。">
+        <meta name="author" content="Nobuoka Yu">
+        <link rel=author href="http://www.hatena.ne.jp/nobuoka/">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+        <link rel="stylesheet" href="0224-kansai-mobile/css/reveal.css">
+        <link rel="stylesheet" href="0224-kansai-mobile/css/theme/black.css" id="theme">
+
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="0224-kansai-mobile/lib/css/zenburn.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? '0224-kansai-mobile/css/print/pdf.css' : '0224-kansai-mobile/css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+
+        <!--[if lt IE 9]>
+        <script src="0224-kansai-mobile/lib/js/html5shiv.js"></script>
+        <![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+             .reveal section img {
+                 margin: 15px 0px;
+                 background: transparent;
+                 border: none;
+                 box-shadow: 0 0 0 transparent;
+             }
+
+             iframe.twitter-tweet {
+                 margin: auto;
+             }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+                <section>
+                    <h1 style="margin-bottom: 0.4em">Jenkins Pipelines と Android アプリ開発</h1>
+                    <p style="margin-top: 2em;">
+                        <div style="margin-bottom: 0.4em;"><a href="http://vividcode.hatenablog.com/">id:nobuoka</a> / <a href="http://twitter.com/nobuoka">@nobuoka</a></div>
+                        <div><small><time datetime="2016-06-18">2016 年 6 月 18 日</time>
+                          — <a href="http://connpass.com/event/31573/">第 7 回 大阪 Jenkins 勉強会</a></small></div>
+                    </p>
+                </section>
+
+                <section>
+                    <h2>こんにちは！ Nobuoka です</h2>
+                    <ul>
+                        <li>はてな id:nobuoka</li>
+                        <li>ソフトウェア開発者
+                            <ul>
+                                <li>モバイルアプリ開発 (<em>Android</em>、UWP)</li>
+                                <li>Web 開発 (Scala、Java、TypeScript、Perl)</li>
+                            </ul>
+                        </li>
+                        <li>仕事は Android アプリ 「はてなブックマーク」 開発</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>目的</h2>
+                    <ul>
+                        <li>Pipeline plugin の雰囲気を伝える<ul>
+                            <li>導入事例 : Android アプリ開発</li>
+                        </ul>
+                        <!-- 導入するかどうか検討するために -->
+                        <li>ノウハウ共有</li>
+                        <!-- 実際に導入した場合に役立つように -->
+
+                        <!--
+                        <li><em>Jenkins 2 で前面に押し出されてる</em></li>
+                        <li>Jenkins 2 で前面に押し出されてる</li>
+                        <li>以下のようなチームは乗り換えるといいかも<ul>
+                            <li>シェルスクリプトでジョブの処理を書いている</li>
+                            <li>複数のプロジェクトでパイプラインを構成している</li>
+                        </ul></li>
+                        -->
+                    </ul>
+                </section>
+
+<!-- 内容
+* ゴール
+    * Jenkins Pipeline の雰囲気を伝える (利点や欠点)
+    * ノウハウを共有
+
+* Pipeline 導入までの話
+    * Pipeline 導入前の 2 つのパターン
+    * なぜ導入することにしたのか
+* Pipeline の導入 (めっちゃ簡単)
+* 利点と欠点
+* ノウハウ集
+-->
+
+
+                <section>
+                    <h2>Pipeline Plugin とは？</h2>
+                </section>
+
+                <section>
+                    <h2>祝！ Jenkins 2.0 リリース！</h2>
+                    <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">After 659 releases of <a href="https://twitter.com/hashtag/Jenkins?src=hash">#Jenkins</a> over 10 years, we hit a historic moment. Thanks for everyone who made it possible. <a href="https://t.co/hFubhEc01c">pic.twitter.com/hFubhEc01c</a></p>&mdash; Kohsuke Kawaguchi (@kohsukekawa) <a href="https://twitter.com/kohsukekawa/status/723012396416012294">April 21, 2016</a></blockquote>
+<script async src="http://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                </section>
+
+                <section>
+                    <img src="0426-kansai-mobile/jenkins-2.0-overview-screenshot.png">
+                    <div><small><a href="https://jenkins.io/2.0/"
+                        >https://jenkins.io/2.0/</a></small></div>
+                </section>
+
+                <section>
+                    <h2>Pipeline as Code</h2>
+                    <ul>
+                        <li>Jenkins 2 の目玉の一つ</li>
+                        <li><em>ジョブの流れをコードで</em>表現<ul>
+                            <li>Groovy による DSL</li>
+                        </ul></li>
+                        <li><a href="https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin">Pipeline plugin</a> により実現<br>→ Jenkins 1.642.3 以降で利用可能</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Delivery pipelines as a first-class entity</h2>
+                    <ul>
+                        <li>Jenkins の主流として各種 Plugin との連携などに期待</li>
+                        <li><a href="https://jenkins.io/projects/blueocean/">Blue Ocean</a
+                            > での UX 向上も</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Pipeline plugin 以前との比較</h2>
+                </section>
+
+                <section>
+                    <h2>複雑なジョブの 2 つのパターン</h2>
+                    <ul>
+                        <li>Shell スクリプトに複雑な処理を記述して単一の Jenkins のジョブで実行</li>
+                        <li>複数の Jenkins のジョブを組み合わせる</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>単一ジョブで Shell スクリプト</h2>
+                    <img style="float: left; margin-right: 50px;"
+                        src="https://docs.google.com/drawings/d/18KRPsL5409w0TqYdREbbftJQHKzEsz6lOJXCLyipnrE/pub?w=273&amp;h=233">
+                    <ul style="display: block; margin-left: 20px;">
+                        <li>○ リポジトリで処理の流れを管理</li>
+                        <li>○ 柔軟に複雑な処理を記述できる</li>
+                        <li>× Jenkins との連携がしづらい</li>
+                        <li>× 失敗時に失敗箇所がわかりづらい</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>複数ジョブの組み合わせ</h2>
+                    <img src="https://docs.google.com/drawings/d/15-9jDAs_QFjgYBvuSnnLo4uPNiswMmjeQBNJDlHZbLM/pub?w=577&amp;h=166">
+                    <ul>
+                        <li>× Jenkins 側でジョブ間の関係の設定が必要</li>
+                        <li>× Plugin の制約などで柔軟さは低い</li>
+                        <li>○ Jenkins との連携はしやすい</li>
+                        <li>○ 失敗箇所はわかりやすい</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Pipeline plugin はいいとこどり</h2>
+                    <img style="float: left; margin-right: 50px;"
+                        src="https://docs.google.com/drawings/d/1iOiR0f3DTkh6m24Bb1-nqhrWb5ysTGwoTH0e9EhOfpo/pub?w=273&amp;h=233">
+                    <ul style="display: block; margin-left: 20px;">
+                        <li>○ リポジトリで処理の流れを管理</li>
+                        <li>○ 柔軟に複雑な処理を記述できる</li>
+                        <li>○ Jenkins との連携もしやすい</li>
+                        <li>○ 失敗箇所はわかりやすい</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>使ってみる</h2>
+                </section>
+
+                <section>
+                    <h2>Multibranch プロジェクトを作成して</h2>
+                    <img src="0426-kansai-mobile/introduction-1.png" style="width: 620px;">
+                </section>
+
+                <section>
+                    <h2>対象の Git リポジトリを指定してポーリング</h2>
+                    <img src="0426-kansai-mobile/introduction-2.png" style="width: 620px;">
+                </section>
+
+                <section>
+                    <h2>ブランチごとのサブプロジェクト</h2>
+                    <img src="0426-kansai-mobile/subprojects.png">
+                </section>
+
+                <section>
+                    <h2>Stage view</h2>
+                    <img src="0426-kansai-mobile/stage-view.png">
+                </section>
+
+                <section>
+                    <h2>Android アプリ開発でやっていること</h2>
+                </section>
+
+                <section>
+                    <h2>Andorid 固有の話 (テスト実行)</h2>
+                    <ul>
+                        <li><a href="https://wiki.jenkins-ci.org/display/JENKINS/Android+Emulator+Plugin"
+                            >Android Emulator Plugin</a> はまだサポートされていない<ul>
+                            <li>『Basic support for the Pipeline Plugin is planned』</li>
+                        </ul></li>
+                        <li>必要なことはいろいろある<ul>
+                            <li>Android SDK のセットアップ</li>
+                            <li>SDK コンポーネントのインストール</li>
+                            <li>テストのためのエミュレータ準備・起動</li>
+                        </ul></li>
+                        <li>→ <a href="https://github.com/nobuoka/jenkins-pipeline-sample-for-android/blob/master/Jenkinsfile">サンプルプロジェクト</a><ul>
+                            <li>泥臭くやってる</li>
+                            <li>現状エミュレータは動いていない (社内では別の方法で動かしている)</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>その他の話題</h2>
+                    <ul>
+                        <li>Slack や GitHub への通知<ul>
+                            <li><code>curl</code> で Web API 叩いてる</li>
+                            <li>対応する Plugin があればそれを使用した方が楽なはず</li>
+                        </ul></li>
+                        <li>特定ブランチで実行されたときにアプリパッケージを配布するとか</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>これまで得た知見 (バッドノウハウも)</h2>
+                </section>
+
+                <section>
+                    <h2>おすすめの構成 (Git で複数ブランチの場合)</h2>
+                    <ul>
+                        <li>Pipeline plugin の <em>Multibranch プロジェクト</em><ul>
+                            <li>Branch source として Git リポジトリ (or GitHub 上のリポジトリ) を指定</li>
+                        </ul></li>
+                        <li>Git リポジトリに <em>Jenkinsfile</em> をコミット<ul>
+                            <li>Jenkinsfile にジョブの処理を記述</li>
+                        </ul></li>
+                        <li>これは直前のデモで行った方法<ul>
+                            <li>Jenkinsfile をリポジトリに含めない方法もある</li>
+                        </ul></li>
+                        <li>See : <a href="https://jenkins.io/blog/2015/12/03/pipeline-as-code-with-multibranch-workflows-in-jenkins/"
+                            >Pipeline-as-code with Multibranch Workflows in Jenkins</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2><code>RejectedAccessException</code> が発生する！</h2>
+                    <ul>
+                        <li>Script Security plugin によるもの</li>
+                        <li>許可してあげましょう</li>
+                        <li>See : <a href="http://qiita.com/nobuoka/items/0f8cc736d8e6439aa4ac"
+                            >Jenkins Pipeline Plugin で RejectedAccessException 例外が発生する</a></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Shell スクリプトの標準入出力やエラー出力はファイルを介す</h2>
+                    <ul>
+                        <li><code>sh</code> で実行するスクリプトの出力を直接取れない / 入力を直接渡せない</li>
+                        <li><a href="https://issues.jenkins-ci.org/browse/JENKINS-26133"
+                            >[JENKINS-26133] Shell script taking/returning output/status</a><ul>
+                            <li>Issue が登録されてるのでそのうち変更されるかも？</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2><code>publishHtml</code> のパラメータ</h2>
+                    <ul>
+                        <li><a href="https://issues.jenkins-ci.org/browse/JENKINS-29711"
+                            >[JENKINS-29711] Snippet Generator: missing attribute names in single-entry forms Export</a></li>
+                        <li>Snippet Generator で生成した Groovy スクリプトが間違ってるというもの</li>
+                        <li>今のところは気を付けましょう (そのうち直るはず)</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Android のビルドタスクの警告がファイルパスをエスケープしないことによる問題</h2>
+                    <ul>
+                        <li>See : <a href="http://qiita.com/nobuoka/items/b83bded7bb1e9b993a54">
+                            Jenkins Pipeline plugin の multibranch プロジェクトで Android アプリのビルドに失敗する問題</a></li>
+                        <li>AndroidManifest.xml の処理タスクで警告発生</li>
+                        <li><em>ファイルパスがエスケープされず</em>に文字列フォーマット</li>
+                        <li>Multibranch Pipeline ではブランチ名の 「/」 が 「%2F」 としてディレクトリが作られる</li>
+                        <li>→ 例外が発生してビルドが止まる</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>おわり</h2>
+                </section>
+
+                <section>
+                    <h2>まとめ</h2>
+                    <ul>
+                        <li>Jenkins 2.0！</li>
+                        <li>Pipeline plugin！！</li>
+                        <li>シェルスクリプトで頑張ってたりプロジェクトの連携を頑張ってる → Pipeline plugin の利用を検討しましょう</li>
+                        <li>Git で開発してるなら Multibranch プロジェクトを使おう！！</li>
+                    </ul>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="0224-kansai-mobile/lib/js/head.min.js"></script>
+        <script src="0224-kansai-mobile/js/reveal.js"></script>
+
+        <script>
+
+            // Full list of configuration options available at:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
+
+                transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+                // Optional reveal.js plugins
+                dependencies: [
+                    { src: '0224-kansai-mobile/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: '0224-kansai-mobile/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '0224-kansai-mobile/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '0224-kansai-mobile/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: '0224-kansai-mobile/plugin/zoom-js/zoom.js', async: true },
+                    { src: '0224-kansai-mobile/plugin/notes/notes.js', async: true }
+                ]
+            });
+
+        </script>
+
+    </body>
+</html>

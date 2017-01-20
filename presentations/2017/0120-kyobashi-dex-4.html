@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ja">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Kotlin で “Thin Cake” Pattern を真似る
+            — Kyobashi.dex #4 (2017 年 1 月 20 日)</title>
+
+<!-- 素案
+
+* sealed class の紹介
+    * どんなものか
+    * when と組み合わせたパターンマッチ
+    * enum に階層構造を持たせたいとき
+    * throws で例外を投げる代わりに RxJava で返すクラスを定義
+    * Java からの見え方
+    * when 文では else 枝が必須ではない
+
+* ジェネリクスでワイルドカードがないという話
+-->
+
+        <meta name="description" content="Kotlin での “Thin Cake” パターンを真似たお手製 DI について紹介します。">
+        <meta name="author" content="Nobuoka Yu">
+        <link rel=author href="http://www.hatena.ne.jp/nobuoka/">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/css/reveal.css">
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/css/theme/black.css" id="theme">
+
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/lib/css/zenburn.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? '../2016/0224-kansai-mobile/css/print/pdf.css' : '../2016/0224-kansai-mobile/css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+
+        <!--[if lt IE 9]>
+        <script src="../2016/0224-kansai-mobile/lib/js/html5shiv.js"></script>
+        <![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+             .reveal section img {
+                 margin: 15px 0px;
+                 background: transparent;
+                 border: none;
+                 box-shadow: 0 0 0 transparent;
+             }
+
+             iframe.twitter-tweet {
+                 margin: auto;
+             }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+                <section>
+                    <h1 style="margin-bottom: 0.4em">Kotlin で “Thin Cake” パターンを真似る</h1>
+                    <p style="margin-top: 2em;">
+                        <div style="margin-bottom: 0.4em;">
+                            <a href="http://twitter.com/nobuoka">@nobuoka</a> / <a href="http://vividcode.hatenablog.com/">id:nobuoka</a>
+                        </div>
+                        <div><small><time datetime="2017-01-20">2017 年 1 月 20 日</time>
+                          — <a href="https://rmp-quipper.connpass.com/event/47555/">Kyobashi.dex #4</a></small></div>
+                    </p>
+                </section>
+
+                <section>
+                    <h2>こんにちは！</h2>
+                    <ul>
+                        <li>@nobuoka です<ul>
+                            <li>Java サーバーサイド / web フロントエンド / Android アプリ</li>
+                            <li><em>Kotlin</em> 1.1 気になりますね！</li>
+                        </ul></li>
+                        <li>今日は Kotlin でのお手製 DI<ul>
+                            <li>“Thin Cake” パターンについて</li>
+                            <li>Kotlin での疑似モジュールミックスイン合成</li>
+                            <li>実用的というより興味本位なので気軽に聞いてください</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Dependency Injection (DI)</h2>
+                    <ul>
+                        <li>依存オブジェクトを注入するパターン</li>
+                        <li>Android アプリ開発でもよく使われる</li>
+                        <li>様々な手法<ul>
+                            <li>Guice のような DI コンテナ、Dagger のようなライブラリ</li>
+                            <li>Cake パターンのようなパターン ← <em>今日はココ</em></li>
+                            <li>コンストラクタで依存オブジェクトを注入 (手動で単純)</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Cake パターン</h2>
+                </section>
+
+<!--
+                <section>
+                    <h2>Sealed class</h2>
+                    <pre><code
+>sealed class Expr {
+    class Const(val number: Double) : Expr()
+    class Sum(val e1: Expr, val e2: Expr) : Expr()
+    object NotANumber : Expr()
+}</code></pre>
+                    <p>
+                        <q>Sealed classes are used for representing restricted class hierarchies,
+                            when a value can have one of the types from a limited set, but cannot have any other type.</q>
+                    </p>
+                    <div>
+                        <small>See: <a href="https://kotlinlang.org/docs/reference/classes.html#sealed-classes"
+                        >Classes and Inheritance - Kotlin Programming Language (Sealed Classes)</a></small>
+                    </div>
+                </section>
+                -->
+
+                <section>
+                    <h2>Cake パターン</h2>
+                    <ul>
+                        <li>Scala におけるお手製 DI のパターン</li>
+                        <li>Odersky 先生らの論文発祥<ul>
+                            <li>See : <a href="http://lampwww.epfl.ch/~odersky/papers/ScalableComponent.pdf">Scalable Component Abstractions</a></li>
+                        </ul></li>
+                        <li>コンポーネント再利用のための 3 つの抽象化<ul>
+                            <li>抽象型メンバー</li>
+                            <li>自分型アノテーション</li>
+                            <li><em>モジュールミックスイン合成</em></li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <section>
+                        <img src="https://recruit-mp.qiita.com/files/24d69ae2-e96a-70d3-8691-978a83feb705.png">
+                        <div><small>(「<a href="http://lampwww.epfl.ch/~odersky/papers/ScalableComponent.pdf">Scalable Component Abstractions</a>」 より)</small></div>
+                    </section>
+
+                    <section>
+                        <h2>モジュールの合成</h2>
+                        <ul>
+                            <li>Trait (実装を持てるインターフェイスぽいもの) をモジュールとして使う</li>
+                            <li>モジュール<ul>
+                                <li>何らかの機能 (オブジェクト) を提供</li>
+                                <li>別のモジュールのオブジェクトに依存<ul>
+                                    <li><em>依存先オブジェクトの詳細を知らない</em></li>
+                                </ul></li>
+                            </ul></li>
+                            <li>モジュールの組み合わせ → オブジェクトグラフ</li>
+                        </ul>
+                    </section>
+                </section>
+
+                    <section>
+                        <h2>“Thin Cake” パターン</h2>
+                        <ul>
+                            <li>See : <a href="http://www.warski.org/blog/2014/02/using-scala-traits-as-modules-or-the-thin-cake-pattern/"
+                                >Using Scala traits as modules, or the “Thin Cake” Pattern</a><ul>
+                                    <li>Cake パターンのシンプル版</li>
+                                    <li>モジュールミックスイン合成のみを使用</li>
+                            </ul></li>
+                            <li>サンプルコード : <a href="https://scalafiddle.io/sf/wXq8fOM/22">https://scalafiddle.io/sf/wXq8fOM/22</a><ul>
+                                <li><code>FooModule</code>、<code>BarModule</code>、<code>BazModule</code> を組み合わせてオブジェクトグラフを生成</li>
+                            </ul></li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>モジュール</h3>
+                        <pre><code
+>trait FooModule {
+  // This module provides:
+  lazy val foo = "foo"
+  lazy val fooBar = s"($foo+$bar)"
+  lazy val fooBarBaz = s"($fooBar+$barBaz+$bazFoo)"
+  
+  // This module depends on:
+  def bar: String
+  def barBaz: String
+  def bazFoo: String
+}</code></pre>
+                        <h3>オブジェクトグラフ</h3>
+                        <pre><code
+>object FooBarBazComponent
+    extends FooModule with BarModule with BazModule {
+  val baz = "baz"
+}</code></pre>
+                        <div><small><a href="https://scalafiddle.io/sf/wXq8fOM/22">https://scalafiddle.io/sf/wXq8fOM/22</a></small></div>
+                    </section>
+
+                <section>
+                    <h2>Kotlin で “Thin Cake” パターン</h2>
+                </section>
+                
+                <section>
+                    <h2>インターフェイスのデフォルト実装！</h2>
+
+                    <h3>モジュール</h3>
+                    <pre><code
+>interface FooModule {
+  // This module provides:
+  val foo get() = "foo" // Kotlin 1.1
+  val fooBar get() = "(foo+$bar)"
+  val fooBarBaz get() = "($fooBar+$barBaz+$bazFoo)"
+  
+  // This module depends on:
+  val bar: String
+  val barBaz: String
+  val bazFoo: String
+}</code></pre>
+                    <h3>オブジェクトグラフ</h3>
+                    <pre><code
+>object FooBarBazComponent : FooModule, BarModule, BazModule {
+  override val baz = "baz"
+}</code></pre>
+                        <div><small><a href="http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/6dh5fg7gqkp4tkkup3sp6vl9bh">http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/6dh5fg7gqkp4tkkup3sp6vl9bh</a></small></div>
+                </section>
+
+                <section>
+                    <h2>が…… 駄目っ……！</h2>
+                    <blockquote>Object 'FooBarBazComponent' must override public open val foo: String defined in FooModule because it inherits multiple interface methods of it</blockquote>
+                    <ul>
+                        <li>継承先の複数のインターフェイスに同じシグネチャ<ul>
+                            <li>デフォルト実装はやっぱりデフォルト実装</li>
+                        </ul></li>
+                        <li>解決はできる : <a href="http://qiita.com/rabitarochan/items/c6709a3a2e2f5d36d4e2"
+                            >Kotlin でも Minimal Cake Pattern</a></li>
+                        <li>そもそも<em>デフォルト実装では値を保持できない</em>問題</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>デリゲーションなら？</h2>
+                    <pre><code
+>class ObjectGraph() :
+    FooModule by FooModuleImpl(),
+    BarModule by BarModuleImpl(),
+    BazModule by BazModuleImpl()
+
+// これではだめ。
+// なぜなら FooModuleImpl が BarModule によって提供される機能に
+// 依存したくでもできない (参照できない) ため。</code></pre>
+                    <ul>
+                        <li>2 つの問題<ul>
+                            <li>モジュールの実装がオブジェクトグラフを参照できない</li>
+                            <li><code><var>Xxx</var>Module</code> インターフェイスにモジュールの依存も宣言されている</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>依存を分離し、依存をパラメータに</h2>
+                    <pre><code
+>interface FooModule {
+  // This module provides:
+  val foo: String
+  // ... (略) ...
+
+  // This module depends on:
+  interface Dependencies {
+    val bar: String
+    // ... (略) ...
+  }
+
+  class Impl(private val d: Lazy&lt;Dependencies>) : FooModule {
+    override val foo get() = "foo"
+    // ... (略) ...
+  }
+}</code></pre>
+                        <div><small><a href="http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/bhtihkpmr4gvil7ib0o8qcmu3v">http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/bhtihkpmr4gvil7ib0o8qcmu3v</a></small></div>
+                </section>
+
+                <section>
+                    <h2>オブジェクトグラフ</h2>
+                    <pre><code
+>interface FooBarBazComponent {
+  interface Dependencies {
+    val baz: String
+  }
+
+  class ObjectGraph(self: Lazy&lt;ObjectGraph>, d: Dependencies) :
+      Dependencies by d,
+      FooModule by FooModule.Impl(self), FooModule.Dependencies,
+      BarModule by BarModule.Impl(self), BarModule.Dependencies,
+      BazModule by BazModule.Impl(self), BazModule.Dependencies
+
+  companion object {
+    fun create(d: Dependencies): ObjectGraph =
+        AtomicReference&lt;ObjectGraph>().let { r ->
+            ObjectGraph(lazy { r.get() }, d).apply { r.set(this) } }
+  }
+}</code></pre>
+                        <div><small><a href="http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/bhtihkpmr4gvil7ib0o8qcmu3v">http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/bhtihkpmr4gvil7ib0o8qcmu3v</a></small></div>
+                </section>
+
+                <section>
+                    <h2>疑似的に “Thin Cake” パターンを実現できた</h2>
+                    <ul>
+                        <li>疑似的にモジュールミックスイン合成を実現<ul>
+                            <li>Kotlin のデリゲーション</li>
+                            <li><code>Lazy</code> によりデリゲーション先オブジェクトに自分自身を渡す (無理やり感)</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>改善</h2>
+                </section>
+
+                    <section>
+                        <h2><code>XxxProvider</code> というインターフェイスを経由して依存関係を記述</h2>
+                        <pre><code
+>interface FooProvider {
+  val foo: String
+}
+// ... こんな感じで ...
+
+interface FooModule :
+    // 提供するオブジェクト一覧
+    FooProvider, FooBarProvider, FooBarBazProvider {
+
+  interface Dependencies :
+      // 依存するオブジェクト一覧
+      BarProvider, BazBarProvider
+
+  class Impl(private val d: Lazy&lt;Dependencies>) : FooModule {
+    // ... 実装 ...
+  }
+}</code></pre>
+                        <div><small><a href="http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/95ntg0h5b3usm2qp0afp4ibpja">http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/95ntg0h5b3usm2qp0afp4ibpja</a></small></div>
+                    </section>
+                    <section>
+                        <h2>インジェクトされるオブジェクトのコンストラクタ</h2>
+                        <pre><code
+>class Hoge(d: Dependencies) {
+  interface Dependencies :
+      FooProvider
+
+  fun useFoo() {
+    // d.foo を使う
+    d.foo + "bar"
+  }
+}
+
+// そうするとモジュール側の実装は単純になる
+module HogeModule : HogeProvider {
+  /* 略 */
+  class Impl(private val d: Lazy&lt;Dependencies>) : HogeModule {
+    override val hoge by lazy { Hoge(d.value) }
+  }
+}</code></pre>
+                        <div><small><a href="http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/95ntg0h5b3usm2qp0afp4ibpja">http://try.kotlinlang.org/#/UserProjects/lhd18hmac9csqh32i9u5mjhmd7/95ntg0h5b3usm2qp0afp4ibpja</a></small></div>
+                    </section>
+
+                <section>
+                    <h2>おわり</h2>
+                    <ul>
+                        <li>疑似モジュールミックスイン合成により疑似 “Thin Cake” パターンを実現</li>
+                        <li>まだ模索中</li>
+                        </ul>Android のサンプルプロジェクト : <a href="https://github.com/nobuoka/android-pseudo-thin-cake-pattern-sample"
+                            >https://github.com/nobuoka/android-pseudo-thin-cake-pattern-sample</a></li>
+                        <li>記述量は多くなるが依存関係は追いやすいはず</li>
+                        <li><em><code>Lazy</code> でデリゲーション先に自分を渡す</em>とか、<em>依存オブジェクトをインターフェイスにまとめる</em>とかは使えそう</li>
+                        <li>Kotlin に Intersection Types が欲しい<ul>
+                            <li><code>Dependencies</code> の定義などに使えそう</li>
+                        </ul></li>
+                    </ul>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="../2016/0224-kansai-mobile/lib/js/head.min.js"></script>
+        <script src="../2016/0224-kansai-mobile/js/reveal.js"></script>
+
+        <script>
+
+            // Full list of configuration options available at:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
+
+                transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+                // Optional reveal.js plugins
+                dependencies: [
+                    { src: '../2016/0224-kansai-mobile/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: '../2016/0224-kansai-mobile/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/zoom-js/zoom.js', async: true },
+                    { src: '../2016/0224-kansai-mobile/plugin/notes/notes.js', async: true }
+                ]
+            });
+
+        </script>
+
+    </body>
+</html>

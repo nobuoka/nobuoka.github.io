@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ja">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Android におけるライフサイクルについて
+            — potatotips #45 (2017 年 11 月 28 日)</title>
+
+<!-- 素案
+	• ライフサイクルに立ち向かう
+		○ Android Architecture Components (AAC) の Lifecycle は良いという話
+			§ 軽い紹介 (コード)
+			§ 昔自分が作ったライブラリ : https://github.com/nobuoka/CallbacksAppComponents
+			§ Activity と機能を分離するのに便利。 (宣言的に書ける。)
+			§ 図
+			§ ライフサイクル以外のコールバックも同様の仕組み (共通のベースクラスを作って、そこに登録する形) を作ると便利。
+		○ AAC の ViewModel の使いどころ
+			§ 内部の実装は Retain Fragment による。
+			§ つまり、再生成には対応できるけどそれしかできない。
+			§ 別のアプリに移動して戻ってくる場合 ViewModel は破棄されうる。 (Activity が破棄されて再度生成された場合。)
+				□ onSaveInstanceState によるデータの生存期間と、ViewModel の生存期間の話
+			§ Activity は onSaveInstanceState で状態を復元できるが、ViewModel 自身にはその機能はない。 (ViewModel 以外の場所で扱う必要がある。)
+			§ Android Developer を見たら、「onSaveInstanceState とローカルストレージへの保存と ViewModel を組み合わせていい感じにしよう」 って書かれてる。
+		○ Dagger の Releasable の話
+			§ 背景
+				□ アプリ全体で 1 つのストアを持ちたい、というような状況がある。
+				□ 多くの画面で使う情報をどこかに持っておきたい場合。
+					® 実現方法はいろいろあって、ローカルストレージに保持して各画面で読み込むとかもできるし、メモリ上にずっと保持しておく方法もある。
+				□ 多くの画面で使うけど必ずしも全部の画面では必要ない、というものをメモリ上から解放する方法が欲しい。
+			§ Dagger の Releasable の紹介。
+				□ 基本的には強参照で持っているが、メソッドを呼び出すことで弱参照に変換できる。
+				□ メモリが戻ったら強参照に戻すメソッドを呼ぶ。
+			§ Android のメモリコールバックの話。
+-->
+
+        <meta name="description" content="Android Architecture Components の Lifecycle や ViewModel、Dagger の Releasable references の話です。">
+        <meta name="author" content="Nobuoka Yu">
+        <link rel=author href="http://www.hatena.ne.jp/nobuoka/">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/css/reveal.css">
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/css/theme/black.css" id="theme">
+
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="../2016/0224-kansai-mobile/lib/css/zenburn.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? '../2016/0224-kansai-mobile/css/print/pdf.css' : '../2016/0224-kansai-mobile/css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+
+        <!--[if lt IE 9]>
+        <script src="../2016/0224-kansai-mobile/lib/js/html5shiv.js"></script>
+        <![endif]-->
+
+        <link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" />
+        <style>
+             .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+                text-transform: none;
+             }
+             .reveal blockquote {
+                 width: 90%;
+             }
+             .reveal code {
+                 font-family: "Consolas", "Source Code Pro", monospace;
+                 text-transform: none !important;
+             }
+             .reveal small {
+                 vertical-align: baseline;
+             }
+             .reveal em {
+                 font-style: normal;
+                 color: yellow;
+                 font-weight: bold;
+             }
+             .reveal section img {
+                 margin: 15px 0px;
+                 background: transparent;
+                 border: none;
+                 box-shadow: 0 0 0 transparent;
+             }
+
+             iframe.twitter-tweet {
+                 margin: auto;
+             }
+             .reveal div.references-block {
+                font-size: 70%;
+                margin: 16px auto;
+             }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+
+                <section>
+                    <h1 style="margin-bottom: 0.4em">Android における<br>ライフサイクル</h1>
+                    <div style="margin-top: 2em;">
+                        <div style="margin-bottom: 0.4em;">
+                            <a href="http://twitter.com/nobuoka">@nobuoka</a> / <a href="http://vividcode.hatenablog.com/">id:nobuoka</a>
+                            <br>
+                            <small>(リクルートマーケティングパートナーズ)</small>
+                        </div>
+                        <div><small><time datetime="2017-10-04">2017 年 11 月 28 日</time>
+                          — <a href="https://github.com/potatotips/potatotips/wiki/potatotips-45">potatotips #45</a></small></div>
+                    </div>
+                </section>
+
+                <section>
+                    <div style="display: flex; align-items: center; justify-content: center; text-align: left; margin-bottom: 28px;">
+                        <div style="flex: 0 0 210px; border: solid 0 white;">
+                            <img src="./nobuoka-icon-pot.jpg" style="height: 180px; width: 180px; margin: 0; border: 2px solid white;">
+                        </div>
+                        <div style="flex: 0 0 auto; padding-bottom: 10px;">
+                            <h2>@nobuoka</h2>
+                            <div style="font-size: 70%; padding-left: 8px;">
+                                サーバーサイド (Java, Kotlin) /
+                                Web (TypeScript) <br>Android (Java, Kotlin)</div>
+                        </div>
+                    </div>
+                    <ul>
+                        <li>仕事はキッズリーのサービス開発<ul>
+                            <li>サーバーサイドに Kotlin を導入した</li>
+                            <li><em>ソフトウェアエンジニア募集中</em>です！！！</li>
+                        </ul></li>
+                        <li>最近は CircleCI 2.0 の Workflow を弄ったり</li>
+                        <li>個人でも仕事を請けてます</li>
+                    </ul>
+                </section>
+                
+                <section>
+                    <h2>Android の辛みである<br>ライフサイクルに関する機能の話</h2>
+                    <ul>
+                        <li><em>Android Architecture Components</em> (AAC)<ul>
+                            <li>Lifecycle-Aware Components → 便利</li>
+                            <li>ViewModel → 使いどころを考える必要</li>
+                        </ul></li>
+                        <li><em>Dagger</em> の Releasable references → 便利そう</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>Lifecycle-Aware Components (AAC)</h2>
+                    <div class="references-block">
+                        <a href="https://developer.android.com/topic/libraries/architecture/lifecycle.html"
+                          >Handling Lifecycles with Lifecycle-Aware Components | Android Developers</a>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>ライフサイクルを認識するクラスを定義できる</h2>
+                    <pre><code
+>// ライフサイクルに応じた処理を行うクラス
+class FooPresenter : LifecycleObserver {
+    @OnLifecycleEvent(Lifecycle.Event.ON_START)
+    fun onStart() { /* 開始処理 */ }
+}
+
+// Activity の onCreate メソッド内などで登録
+lifecycle.addObserver(FooPresenter())</code></pre>
+                    <p>
+                        昔似たようなライブラリを作ってた : <a href="https://github.com/nobuoka/CallbacksAppComponents"
+                            >github:nobuoka/CallbacksAppComponents</a>
+                    </p>
+                </section>
+
+                <section>
+                    <h2>何が便利か : Activity からの分離</h2>
+                    <div>
+                        <img src="https://docs.google.com/drawings/d/e/2PACX-1vTbCLiFPZvNnuYwV3_oLYw3XuStU83h4IULau7BTxKJMdO4C9K_0uWufR8LgtLXW2h1MYgMVNvB2w0W/pub?w=494&amp;h=406">
+                    </div>
+                    <p>
+                        ライフサイクル以外のコールバックも扱える仕組みを用意すると便利 (<code>onActivityResult</code> とか)
+                    </p>
+                </section>
+
+                <section>
+                    <h2><code>ProcessLifecycleOwner</code>！</h2>
+                    <ul>
+                        <li>複数 Activity の状態遷移を繋げたライフサイクル</li>
+                        <li><em>フォアグラウンドに表示されてから消えるまで</em>とか</li>
+                        <li>その状態にとどまる場合にイベントが発火されるぽい<ul>
+                            <li>アプリ内の画面遷移や画面回転などでは発火しない</li>
+                        </ul></li>
+                        <li><code>ON_DESTROY</code> はない</li>
+                        <li><code>ON_PAUSE</code> と <code>ON_STOP</code> のイベントには遅れがある</li>
+                    </ul>
+                    <div class="references-block">
+                        <a href="https://developer.android.com/reference/android/arch/lifecycle/ProcessLifecycleOwner.html"
+                            >ProcessLifecycleOwner | Android</a>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>ViewModel (AAC)</h2>
+                    <div class="references-block">
+                        <a href="https://developer.android.com/topic/libraries/architecture/viewmodel.html"
+                          >ViewModel | Android Developers</a>
+                    </div>
+                </section>
+
+                <section>
+                    <h2><span style="font-size: 0.9em;">“store and manage UI-related data in a lifecycle conscious way”</span></h2>
+                    <ul>
+                        <li><em>Configuration changes を超えて生存できる</em></li>
+                        <li class="fragment" data-fragment-index="1"><code>onSaveInstanceState()</code> メソッドはいらん子や！</li>
+                        <li class="fragment" data-fragment-index="1">やったね！！！！ ✧◝(⁰▿⁰)◜✧</li>
+                        <li class="fragment" data-fragment-index="2">となるのかというと……？</li>
+                    </ul>
+                </section>
+                
+                <section>
+                    <h2>そんなことはない ｡ﾟ(ﾟ∩´﹏`∩ﾟ)ﾟ｡</h2>
+                    <ul>
+                        <li>Configuration changes を超えて生存できる</li>
+                        <li><em>Configuration changes 以外の再生成に対応できない</em></li>
+                        <li>内部では <em>Retain Fragment</em> が使われている</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2>ViewModel とライフサイクル</h2>
+                    <div>
+                        <img src="https://docs.google.com/drawings/d/e/2PACX-1vStP9MsH_k4HWcaP84cpFxCgPgA_86zq_7PsPOJKzPbpS_7YyjfNxdUP93NGlPFSEUzfegFKxy3lzYH/pub?w=601&amp;h=439">
+                    </div>
+                    <!--
+                    <ul>
+                        <li>ViewModel の生存期間は Activity や通常の Fragment よりも長い</li>
+                        <li><em>onSaveInstanceState によるデータの生存期間</em>よりも ViewModel の生存期間は短い</li>
+                        <li>Activity は onSaveInstanceState で状態を復元できるが、ViewModel 自身にはその機能はない。 (ViewModel 以外の場所で扱う必要がある。)</li>
+                        <li>TODO : 端末再起動時の挙動も調べる</li>
+                    </ul>
+                    -->
+                </section>
+                
+                <section>
+                    <p>Retain Fragment では <code>onSaveInstanceState</code> を使えるんやけど……</p>
+                </section>
+
+                <section>
+                    <h2>ViewModel の使いどころ</h2>
+                    <ul>
+                        <li>向いてること :<ul>
+                            <li>ネットワーク通信の保持</li>
+                            <li>どこかに保存されている情報の保持、など<ul>
+                                <li>再生成時に読み込めば良い</li>
+                            </ul></li>
+                        </ul></li>
+                        <li>向かない : ViewModel にしかない情報の保持<ul>
+                            <li>ユーザーが入力中の値など</li>
+                            <li>向かないというか、別途保存の仕組みが必要</li>
+                        </ul></li>
+                        <li>『<code>onSaveInstanceState</code> とローカルストレージへの保存と ViewModel を組み合わせていい感じに』</li>
+                    </ul>
+                    <div class="references-block">
+                        <a href="https://developer.android.com/topic/libraries/architecture/saving-states.html"
+                          >Saving UI States | Android Developers</a>
+                    </div>
+                </section>
+                
+                <section>
+                    <p>銀の弾丸ではない</p>
+                </section>
+                
+                <section>
+                    <h2>Dagger の Releasable References</h2>
+                    <div>(実験的機能)</div>
+                    <div class="references-block">
+                        <a href="https://google.github.io/dagger/users-guide.html#releasable-references"
+                          >Releasable references (Dagger User's Guide)</a>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>背景 : アプリ全体で単一のデータストアを持ちたい (みたいな欲求)</h2>
+                    <ul>
+                        <li>static 変数や Dagger の Singleton を使う？</li>
+                        <li>→ 常にメモリ上に保持してしまう</li>
+                        <li>使ってないオブジェクトは開放したい！</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <section>
+                        <h2>Dagger の Releasable References</h2>
+                        <blockquote>
+                                When a binding uses a scope annotation, that means that the <em>component object holds a reference to the bound object until the component object
+                                itself is garbage-collected</em>.
+                                In memory-sensitive environments such as Android, you may want to let scoped objects that are not currently being used <em>be deleted during
+                                garbage collection when the application is under memory pressure</em>.
+                        </blockquote>
+                    </section>
+                    <section>
+                        <ul>
+                            <li>スコープアノテーションを付けると<em>コンポーネントがインスタンスを保持し続ける</em></li>
+                            <li>メモリ空き容量が減ったらその時使ってないオブジェクトは GC したいよね？</li>
+                        </ul>
+                    </section>
+                </section>
+                
+                <section>
+                    <h2>参照を解放する機能を持ったコンポーネントを作れる！</h2>
+                    <ul>
+                        <li>基本的には強参照で持っているが、メソッドを呼び出すことで弱参照に変換できる</li>
+                        <li>メモリが戻ったら強参照に戻すメソッドを呼ぶ</li>
+                        <li>スコープアノテーションに <a href="https://google.github.io/dagger/api/latest/dagger/releasablereferences/CanReleaseReferences.html"
+                            ><code>@CanReleaseReferences</code></a> アノテーションを付けて制御</li>
+                        <li>まだ実験機能ぽい</li>
+                    </ul>
+                </section>
+                
+                <section>
+                    <section>
+                        <h2>Releasable References 使用例</h2>
+                        <p>アプリケーションのコールバックを登録して空きメモリ容量低下時に参照を解放する。</p>
+                        <pre><code
+>class App : Application() {
+  override fun onCreate() {
+    super.onCreate()
+    // ReleasableReferenceManager を取得して、
+    val m = component.myReleasableReferenceManager()
+    // アプリケーションのコールバックを登録。
+    registerComponentCallbacks(MemoryLowCallback(m))
+    registerActivityLifecycleCallbacks(MemoryHighCallback(m))
+  }
+}
+
+/** メモリを使っていい状況になったら呼ばれるクラス。 */
+private class MemoryHighCallback(
+    private val m: ReleasableReferenceManager
+) : ActivityLifecycleCallbacks {
+  override fun onActivityStarted(activity: Activity) {
+    m.restoreStrongReferences()
+  }
+}
+
+/** メモリの空き容量の低下を扱うクラス。 */
+private class MemoryLowCallback(
+    private val m: ReleasableReferenceManager
+) : ComponentCallbacks2 {
+  override fun onTrimMemory(level: Int) {
+    val doRelease = when (level) {
+      TRIM_MEMORY_RUNNING_MODERATE, TRIM_MEMORY_RUNNING_LOW -> false
+      TRIM_MEMORY_RUNNING_CRITICAL -> true
+      TRIM_MEMORY_BACKGROUND -> false
+      TRIM_MEMORY_MODERATE, TRIM_MEMORY_COMPLETE -> true
+      TRIM_MEMORY_UI_HIDDEN -> false
+      else -> false
+    }
+    if (doRelease) m.releaseStrongReferences()
+  }
+}
+
+@Singleton
+@Component
+interface ApplicationComponent {
+    fun myReleasableComponent(): MyReleasableComponent
+
+    @ForReleasableReferences(MyReleasable::class)
+    fun myReleasableReferenceManager(): ReleasableReferenceManager
+}
+
+/** 参照を解放する機能を持つコンポーネント。 */
+@MyReleasable
+@Subcomponent
+interface MyReleasableComponent {
+  /* ... */
+}</code></pre>
+                    </section>
+                </section>
+
+                <section>
+                    <h2>おわり</h2>
+                    <ul>
+                        <li>ライフサイクルの話</li>
+                        <li>Android Architecture Components (AAC)<ul>
+                            <li>Lifecycle-Aware Components → 便利<ul>
+                                <li><code>ProcessLifecycleOwner</code> もあるぞ！</li>
+                            </ul></li>
+                            <li>ViewModel → 使いどころを考える必要</li>
+                        </ul></li>
+                        <li>Dagger の Releasable references → 便利そう</li>
+                    </ul>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="../2016/0224-kansai-mobile/lib/js/head.min.js"></script>
+        <script src="../2016/0224-kansai-mobile/js/reveal.js"></script>
+
+        <script>
+
+            // Full list of configuration options available at:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
+
+                transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+                // Optional reveal.js plugins
+                dependencies: [
+                    { src: '../2016/0224-kansai-mobile/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: '../2016/0224-kansai-mobile/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: '../2016/0224-kansai-mobile/plugin/zoom-js/zoom.js', async: true },
+                    { src: '../2016/0224-kansai-mobile/plugin/notes/notes.js', async: true }
+                ]
+            });
+
+        </script>
+
+    </body>
+</html>

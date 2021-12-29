@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>nobuoka</title>
+  <style>
+    #parallax {
+    height: 400px;
+    width: 400px;
+    border: solid 2px rebeccapurple;
+    overflow-x:hidden;
+    overflow-y:auto;
+    padding-bottom: 2000px;
+    }
+    body {
+        padding: 0;
+        margin: 0;
+    }
+
+    .layer-back {
+        transform:translateZ(-300px) scale(2);
+        z-index:2;
+    }
+    .header {
+        border-bottom: solid 1px white;
+    }
+    a {
+        text-decoration: none;
+    }
+  </style>
+</head>
+<body style="padding: 0 8px;">
+  <div class="header" style="margin: 0 -8px; opacity: 0.95; position: sticky; top: -260px;">
+        <div class="bg-container">
+          <div class="bg" style="background-image: url('./index_background.jpg'); background-size: cover; background-repeat: no-repeat; background-position: center; width: 100%; height: 360px;"></div>
+        </div>
+  </div>
+  <div style="margin: 16px auto; padding: 8px 16px; max-width: 60em; border: solid 1px rgba(60, 60, 60, 0.1); background-color: rgba(255, 255, 255, 0.3)">
+    <h1>Nobuoka Yu (信岡 ゆう)</h1>
+    <p>本名は 信岡 裕也 (Nobuoka Yuya)。 ソフトウェアエンジニア / エンジニアリングマネージャ。 主に web サービスの開発 (サーバーサイド、Android、web フロントエンド)。</p>
+    <section>
+      <h2>ブログ</h2>
+      <ul>
+        <li>
+          <span><a href="https://vividcode.hatenablog.com/">ひだまりソケットは壊れない</a></span>
+        </li>
+        <li>
+          <span><a href="https://vcs.hatenablog.com/">一角獣は夜に啼く</a></span>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>発表等</h2>
+      <ul>
+        <li>
+          <span><a href="http://nobuoka.github.io/presentations/2017/1004-rkt-1.html">Kotlin で “Thin Cake” パターンを真似る</a></span>
+          <span>R.kt #1</span>
+          <span>2017 年</span>
+        </li>
+        <li>
+          <span><a href="https://www.slideshare.net/YuNobuoka/5-58454512">5 年続く 「はてなブックマーク」 アプリを継続開発する技術</a></span>
+          <span>DroidKaigi 2016</span>
+          <span>2016 年</span>
+        </li>
+        <li>
+          <span><a href="https://ci.nii.ac.jp/naid/110008757878">小型リニア RF トラップに閉じ込めた Ba<sup>+</sup> イオンの <sup>2</sup>S<sub>1/2</sub>-<sup>2</sup>D<sub>5/2</sub> 時計遷移の観測 II</a></span>
+          <span>日本物理学会</span>
+          <span>2011 年</span>
+        </li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>
